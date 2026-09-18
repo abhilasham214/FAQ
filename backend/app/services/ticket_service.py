@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import DuplicateUploadError
@@ -36,7 +37,11 @@ def save_upload(db: Session, content: bytes, filename: str) -> UploadOut:
 
     db.add_all(TicketRow(**t.model_dump()) for t in new_tickets)
     db.add(UploadRecord(file_hash=file_hash, filename=filename, tickets_added=len(new_tickets)))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:  # a concurrent request stored the same file / tickets first
+        db.rollback()
+        raise DuplicateUploadError("These tickets were uploaded by another request") from exc
     return UploadOut(
         tickets_added=len(new_tickets),
         tickets_skipped_existing=len(result.tickets) - len(new_tickets),

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     cache_dir: str = ".cache"
+    cors_origins: str = "http://localhost:3000"  # comma-separated
 
 
 def get_settings() -> Settings:
