@@ -16,3 +16,11 @@ class InsufficientTicketsError(FaqBuilderError):
 
 class EmbeddingError(FaqBuilderError):
     """Embedding generation failed."""
+
+
+class LLMError(FaqBuilderError):
+    """The LLM provider call failed (network, quota, auth, ...)."""
+
+
+class InvalidLLMOutputError(FaqBuilderError):
+    """The LLM answered, but not with valid, grounded FAQ JSON."""
