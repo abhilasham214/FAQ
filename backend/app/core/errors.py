@@ -18,6 +18,14 @@ class EmbeddingError(FaqBuilderError):
     """Embedding generation failed."""
 
 
+class DuplicateUploadError(FaqBuilderError):
+    """The same file was uploaded before."""
+
+
+class NotFoundError(FaqBuilderError):
+    """A requested cluster / FAQ does not exist."""
+
+
 class LLMError(FaqBuilderError):
     """The LLM provider call failed (network, quota, auth, ...)."""
 

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: Optional[str] = None
     database_url: Optional[str] = None
+    llm_provider: str = "mock"  # "mock" (offline) or "gemini"
     gemini_model: str = "gemini-2.5-flash"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     cache_dir: str = ".cache"
