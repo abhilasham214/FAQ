@@ -41,7 +41,7 @@ def test_embedding_failure_returns_502_and_keeps_existing_data(loaded):
     assert loaded.get("/api/stats").json()["total_tickets"] == 20  # uploaded tickets untouched
 
 
-def test_database_failure_returns_503(client):
+def test_database_failure_returns_503(client, caplog):
     def broken_db():
         raise OperationalError("SELECT 1", {}, Exception("connection refused"))
         yield  # pragma: no cover
@@ -50,6 +50,9 @@ def test_database_failure_returns_503(client):
     resp = client.get("/api/stats")
     assert resp.status_code == 503 and "Database error" in resp.json()["detail"]
     assert "connection refused" not in resp.text  # internals are not leaked
+    # ...but they are in the server log, so the 503 can be debugged
+    record = next(r for r in caplog.records if r.getMessage() == "Database error on GET /api/stats")
+    assert "connection refused" in str(record.exc_info[1])
 
 
 def test_non_utf8_upload_is_400(client):

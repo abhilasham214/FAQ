@@ -3,8 +3,8 @@
 - DATABASE_URL unset -> SQLite file `faq_dev.db` in the working directory (handy for dev).
 - Tables are created by init_db() at startup (main.lifespan). There are no migrations: after
   changing a model, reset the affected tables (see README "Resetting the database").
-- "Database error; please try again" (HTTP 503) in the UI = a SQLAlchemyError. The handler in
-  main.py does not log the underlying exception, so reproduce locally (or log it there) to see it.
+- "Database error; please try again" (HTTP 503) in the UI = a SQLAlchemyError. The server log
+  has the full traceback under "Database error on <METHOD> <path>" (logged in main.py).
   Most common cause in production: a wrong DATABASE_URL or the database being unreachable.
 """
 from __future__ import annotations

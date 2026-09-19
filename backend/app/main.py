@@ -33,6 +33,7 @@ from app.core.config import get_settings
 from app.database.session import init_db
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 # Domain error -> HTTP status. Routes stay free of try/except.
 STATUS_BY_ERROR = {
@@ -77,10 +78,11 @@ async def domain_error_handler(_: Request, exc: FaqBuilderError) -> JSONResponse
     return JSONResponse(status_code=status, content={"detail": str(exc)})
 
 
-# Hides DB details from clients. Note: `exc` is not logged here, so a 503 leaves no trace in the
-# server log; add `logging.getLogger(__name__).exception(...)` when chasing a database problem.
+# Clients get a generic message; the full exception and traceback go to the server log.
+# Search the log for "Database error on" to find it.
 @app.exception_handler(SQLAlchemyError)
-async def database_error_handler(_: Request, exc: SQLAlchemyError) -> JSONResponse:
+async def database_error_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
+    logger.error("Database error on %s %s", request.method, request.url.path, exc_info=exc)
     return JSONResponse(status_code=503, content={"detail": "Database error; please try again"})
 
 
