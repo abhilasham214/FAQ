@@ -16,6 +16,9 @@ DEV_FALLBACK_URL = "sqlite:///./faq_dev.db"  # only used when DATABASE_URL is un
 @lru_cache
 def get_engine() -> Engine:
     url = get_settings().database_url or DEV_FALLBACK_URL
+    # Hosted Postgres providers hand out postgres:// URLs, which SQLAlchemy 2 rejects.
+    if url.startswith("postgres://"):
+        url = "postgresql+psycopg2://" + url[len("postgres://"):]
     kwargs = {"connect_args": {"check_same_thread": False}} if url.startswith("sqlite") else {"pool_pre_ping": True}
     return create_engine(url, **kwargs)
 

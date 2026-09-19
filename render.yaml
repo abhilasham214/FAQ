@@ -1,0 +1,26 @@
+# Render blueprint: FastAPI backend + Postgres. The Next.js frontend is deployed on Vercel.
+services:
+  - type: web
+    name: faq-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: faq-db
+          property: connectionString
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false # entered in the Render dashboard
+      - key: CORS_ORIGINS
+        sync: false # the Vercel URL, e.g. https://faq-builder.vercel.app
+
+databases:
+  - name: faq-db
+    plan: free
+    databaseName: faq
+    user: faq

@@ -14,4 +14,5 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 COPY app ./app
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Hosting platforms (Render, Railway, ...) inject $PORT; default to 8000 for docker-compose.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
