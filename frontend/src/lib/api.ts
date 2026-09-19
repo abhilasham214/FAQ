@@ -1,3 +1,13 @@
+/**
+ * Typed client for the FastAPI backend. Every request goes through `request` below.
+ *
+ * Debugging "Cannot reach the backend. Is it running?": fetch itself failed. Usual causes are
+ * - the backend is down or asleep (Render free plan: the first request after idle takes ~1 min);
+ * - NEXT_PUBLIC_API_URL is wrong. It is baked in at BUILD time, so redeploy after changing it;
+ * - CORS: the backend's CORS_ORIGINS does not list this site's exact URL (browser console shows it).
+ * Any other message is the backend's own `detail` text, so search the backend for it.
+ */
+
 import type {
   Cluster,
   ClusterDetail,
@@ -11,6 +21,8 @@ import type {
   UploadResult,
 } from "./types";
 
+// A deployed site calling localhost:8000 (see the browser's Network tab) means the variable
+// was missing when the site was built.
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

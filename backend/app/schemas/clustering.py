@@ -1,3 +1,4 @@
+"""In-memory result of one clustering pass (before it is stored in the database)."""
 from __future__ import annotations
 
 from typing import List

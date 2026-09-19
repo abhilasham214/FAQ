@@ -1,3 +1,8 @@
+"""Read-side queries (clusters, tickets, stats) and the FAQ generate / regenerate actions.
+
+FAQ failures are stored on the cluster as `faq_error` (the user-facing message) rather than
+in a status column; _faq_status derives GENERATION_FAILED / QUOTA_EXHAUSTED from it.
+"""
 from __future__ import annotations
 
 from typing import List, Optional

@@ -1,3 +1,4 @@
+"""FAQ table: at most one row per cluster (cluster_id is unique), plus its review status."""
 from __future__ import annotations
 
 import enum

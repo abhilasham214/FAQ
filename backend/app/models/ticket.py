@@ -1,3 +1,4 @@
+"""Uploaded tickets, and the upload log used to reject duplicate files."""
 from __future__ import annotations
 
 from datetime import datetime

@@ -1,3 +1,4 @@
+"""The FAQ JSON contract the LLM must satisfy, and the per-cluster generation outcome."""
 from __future__ import annotations
 
 from typing import List, Optional

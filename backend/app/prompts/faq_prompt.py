@@ -1,3 +1,8 @@
+"""The prompt sent to the LLM for one cluster's FAQ.
+
+Editing the prompt? Bump PROMPT_VERSION: it is part of the LLM cache key, so otherwise old
+cached FAQs keep being returned and the change appears to do nothing.
+"""
 from __future__ import annotations
 
 from typing import List, Optional

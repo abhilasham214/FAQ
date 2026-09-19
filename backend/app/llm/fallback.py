@@ -1,3 +1,4 @@
+"""Wrapper enabled by LLM_FALLBACK_TO_MOCK=true: Gemini first, the offline mock if it fails."""
 from __future__ import annotations
 
 import logging

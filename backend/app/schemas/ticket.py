@@ -1,3 +1,4 @@
+"""Validated ticket rows and per-row upload errors."""
 from __future__ import annotations
 
 from typing import List

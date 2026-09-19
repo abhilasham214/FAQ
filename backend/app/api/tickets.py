@@ -1,3 +1,4 @@
+"""CSV upload endpoint. Validation lives in services/ingestion.py, storage in services/ticket_service.py."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, UploadFile

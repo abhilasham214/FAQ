@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * Dashboard ("/"): totals, cluster-size chart and review-status counts.
+ * Data: GET /api/stats. All zeros? No tickets uploaded yet, or the frontend points at a different
+ * backend (check NEXT_PUBLIC_API_URL).
+ */
+
 import Link from "next/link";
 import { DistributionChart } from "@/components/DistributionChart";
 import { EmptyState, ErrorBanner, Loading, PageHeader, StatCard } from "@/components/ui";

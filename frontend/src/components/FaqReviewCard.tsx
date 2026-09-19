@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * One FAQ with its review actions (approve, reject, edit, regenerate).
+ * Every action returns the updated FAQ from the backend and hands it to the parent via onChange /
+ * onRegenerated; the card never guesses the new status itself.
+ */
+
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";

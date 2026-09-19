@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * Clusters list: every cluster of the latest run, with a Generate / Retry FAQ button each.
+ * Data: GET /api/clusters. The button calls POST /api/clusters/{id}/faq/generate (one Gemini call).
+ * A failed generation is not thrown: it comes back as cluster.faq_error and is shown inline.
+ */
+
 import Link from "next/link";
 import { useState } from "react";
 import { EmptyState, ErrorBanner, Loading, PageHeader, StatusBadge } from "@/components/ui";

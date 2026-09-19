@@ -1,3 +1,4 @@
+"""Edit and approve / reject a single FAQ."""
 from __future__ import annotations
 
 from sqlalchemy.orm import Session

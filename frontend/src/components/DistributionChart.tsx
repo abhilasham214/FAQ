@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * Bar chart of tickets per cluster (Recharts), used on the dashboard.
+ */
+
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface Props {

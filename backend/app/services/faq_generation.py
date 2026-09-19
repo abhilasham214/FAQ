@@ -1,3 +1,15 @@
+"""Pipeline step 6: turn one cluster's representative tickets into a validated FAQ.
+
+For one cluster: check the cache -> build the prompt -> call the provider -> parse and
+validate the JSON -> check the cited ticket IDs -> cache the result. Failures come back as a
+ClusterFaqResult with `error` set (never raised), so one bad cluster can't break the others.
+
+Where to look when...
+- the FAQ never changes after editing the prompt: bump PROMPT_VERSION (part of cache_key).
+- you want a fresh FAQ: delete CACHE_DIR/llm, or use Regenerate in the UI.
+- the UI says "The model did not return a usable FAQ": the server log line
+  "FAQ generation failed for cluster N: ..." has the validation error.
+"""
 from __future__ import annotations
 
 import hashlib

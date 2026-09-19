@@ -1,3 +1,8 @@
+"""Typed domain errors. Services raise these; main.py turns each into an HTTP status.
+
+Adding a new error: subclass FaqBuilderError AND add it to STATUS_BY_ERROR in main.py,
+otherwise it reaches the client as a 500.
+"""
 from __future__ import annotations
 
 from typing import Optional

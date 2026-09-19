@@ -1,3 +1,12 @@
+"""Runtime settings, read from environment variables or a `.env` file.
+
+Env var names are the field names upper-cased (gemini_api_key <- GEMINI_API_KEY).
+Debugging "my setting is ignored":
+- `.env` is resolved relative to the *current working directory*, not this file. Starting
+  uvicorn from another folder silently skips it; real environment variables always win.
+- CORS origins and the embedder are read once at startup (main.py, api/deps.py), so restart
+  the server after changing CORS_ORIGINS or EMBEDDING_MODEL.
+"""
 from __future__ import annotations
 
 from typing import Optional

@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Upload page: POST the CSV, then immediately run clustering (POST /api/clusters/generate).
+ * No LLM call happens here; FAQs are generated per cluster on the Clusters page.
+ */
+
 import Link from "next/link";
 import { useState } from "react";
 import { ErrorBanner, PageHeader } from "@/components/ui";

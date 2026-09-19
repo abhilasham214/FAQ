@@ -1,3 +1,4 @@
+"""Interface every LLM provider implements (Gemini, mock, fallback wrapper)."""
 from __future__ import annotations
 
 from typing import Protocol

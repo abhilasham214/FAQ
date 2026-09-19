@@ -1,3 +1,9 @@
+"""Local sentence-transformers embeddings (default all-MiniLM-L6-v2, 384 dims).
+
+The first call downloads the model (~90 MB) into the Hugging Face cache (HF_HOME), so the
+first clustering request is slow. EmbeddingError "Could not load embedding model" usually
+means no internet on first run, a wrong EMBEDDING_MODEL name, or not enough memory.
+"""
 from __future__ import annotations
 
 from typing import List

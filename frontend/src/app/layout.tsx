@@ -1,3 +1,8 @@
+/**
+ * Root layout: wraps every page with the top navigation.
+ * Page files live in app/<route>/page.tsx (Next.js App Router).
+ */
+
 import type { Metadata } from "next";
 import "./globals.css";
 import { Nav } from "@/components/Nav";

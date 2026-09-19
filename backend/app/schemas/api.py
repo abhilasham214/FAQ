@@ -1,3 +1,8 @@
+"""Request/response shapes of the HTTP API.
+
+Keep in sync with frontend/src/lib/types.ts: a field renamed here and not there shows up as
+`undefined` in the UI, not as an error.
+"""
 from __future__ import annotations
 
 from datetime import datetime
@@ -55,7 +60,8 @@ class ClusterOut(BaseModel):
     representative_tickets: List[Ticket]
     faq: Optional[FaqOut] = None
     faq_error: Optional[str] = None
-    faq_status: Optional[str] = None  # the FAQ's status, or GENERATION_FAILED when generation failed
+    # the FAQ's status; GENERATION_FAILED / QUOTA_EXHAUSTED when generation failed; None if never tried
+    faq_status: Optional[str] = None
 
 
 class FaqBatchOut(BaseModel):

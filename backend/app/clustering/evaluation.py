@@ -1,3 +1,8 @@
+"""Fit the clusterer once per candidate K and score each fit with the silhouette score.
+
+The scores end up in cluster_runs.k_results and on each cluster page ("Silhouette by K"),
+so "why did it pick K=5?" can be answered from the UI without re-running anything.
+"""
 from __future__ import annotations
 
 from typing import Dict, Sequence, Tuple

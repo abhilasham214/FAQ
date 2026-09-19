@@ -1,3 +1,7 @@
+"""On-disk embedding cache (CACHE_DIR/embeddings/<sha256>.npy).
+
+Always safe to delete: it only makes re-clustering faster. A corrupt file is recomputed.
+"""
 from __future__ import annotations
 
 import hashlib

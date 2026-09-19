@@ -1,3 +1,8 @@
+"""Pipeline steps 3-5: embed tickets, cluster for each K, keep the best, pick representatives.
+
+Pure function of its inputs (no database, no LLM), so it can be run and debugged on its own:
+  python backend/scripts/run_pipeline.py data/sample_tickets.csv
+"""
 from __future__ import annotations
 
 from typing import List, Sequence

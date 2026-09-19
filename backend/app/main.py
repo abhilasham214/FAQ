@@ -1,3 +1,11 @@
+"""FastAPI entry point: app, CORS, routers, and the domain-error -> HTTP-status mapping.
+
+Request path: router (app/api) -> service (app/services) -> SQLAlchemy models (app/models).
+Routes never catch domain errors; they bubble up to `domain_error_handler` below, which picks
+the status code from STATUS_BY_ERROR. Wrong status code? Start with that table.
+
+Run locally:  cd backend && uvicorn app.main:app --reload --port 8000   (docs at /docs)
+"""
 from __future__ import annotations
 
 import logging
@@ -42,11 +50,16 @@ STATUS_BY_ERROR = {
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # Runs once at startup. A crash here with a connection error means DATABASE_URL is wrong
+    # or the database is not reachable yet.
     init_db()
     yield
 
 
 app = FastAPI(title="Knowledge Base FAQ Auto Builder", lifespan=lifespan)
+# The browser blocks responses whose Origin is not listed here; the UI then only says
+# "Cannot reach the backend". CORS_ORIGINS must match the frontend URL exactly
+# (scheme + host, no trailing slash), and changes need a restart.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in get_settings().cors_origins.split(",") if o.strip()],
@@ -59,10 +72,13 @@ for router in (tickets.router, clusters.router, faqs.router, stats.router):
 
 @app.exception_handler(FaqBuilderError)
 async def domain_error_handler(_: Request, exc: FaqBuilderError) -> JSONResponse:
+    # isinstance match, so subclasses inherit their parent's status; unlisted errors become 500.
     status = next((code for cls, code in STATUS_BY_ERROR.items() if isinstance(exc, cls)), 500)
     return JSONResponse(status_code=status, content={"detail": str(exc)})
 
 
+# Hides DB details from clients. Note: `exc` is not logged here, so a 503 leaves no trace in the
+# server log; add `logging.getLogger(__name__).exception(...)` when chasing a database problem.
 @app.exception_handler(SQLAlchemyError)
 async def database_error_handler(_: Request, exc: SQLAlchemyError) -> JSONResponse:
     return JSONResponse(status_code=503, content={"detail": "Database error; please try again"})

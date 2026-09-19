@@ -1,3 +1,8 @@
+/**
+ * TypeScript mirror of the backend's response models (backend/app/schemas/api.py).
+ * Keep the two in sync by hand: a renamed backend field shows up here as `undefined`, not as an error.
+ */
+
 export type FaqStatus =
   | "GENERATED"
   | "REVIEW"

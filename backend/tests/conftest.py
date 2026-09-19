@@ -1,3 +1,4 @@
+"""Shared test fixtures. FakeEmbedder replaces the real model so the fast suite needs no download."""
 from __future__ import annotations
 
 import hashlib

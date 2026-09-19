@@ -1,3 +1,8 @@
+"""Tables for a clustering run: the run itself, its clusters, and cluster <-> ticket membership.
+
+Only the latest run is kept: pipeline_service._replace_run deletes the old rows on every
+re-cluster, including FAQs.
+"""
 from __future__ import annotations
 
 from datetime import datetime

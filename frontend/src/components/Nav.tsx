@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * Top navigation bar; the active link is derived from the current URL.
+ */
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 

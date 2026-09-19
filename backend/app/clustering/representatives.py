@@ -1,3 +1,4 @@
+"""Choose the tickets sent to the LLM: the ones closest to their cluster's centre."""
 from __future__ import annotations
 
 from typing import List

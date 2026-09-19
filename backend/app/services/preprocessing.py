@@ -1,3 +1,4 @@
+"""Pipeline step 2: turn a ticket into the single text string that gets embedded."""
 from __future__ import annotations
 
 import re

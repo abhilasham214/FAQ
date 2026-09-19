@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * FAQ Review: every generated FAQ with approve / reject / edit / regenerate, filterable by status.
+ * Data comes from GET /api/clusters (each cluster carries its FAQ); there is no separate "list FAQs" endpoint.
+ */
+
 import Link from "next/link";
 import { useState } from "react";
 import { FaqReviewCard } from "@/components/FaqReviewCard";

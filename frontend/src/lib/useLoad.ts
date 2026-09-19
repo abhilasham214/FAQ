@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * Tiny fetch-on-mount hook used by every page (no caching, no refetch on focus).
+ */
+
 import { useCallback, useEffect, useState } from "react";
 
 /** Minimal data-loading hook: runs `fn` on mount and whenever `reload` is called. */

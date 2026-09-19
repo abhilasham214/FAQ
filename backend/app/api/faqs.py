@@ -1,3 +1,4 @@
+"""Review actions on one FAQ: edit, approve, reject. Status rules live in services/faq_service.py."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

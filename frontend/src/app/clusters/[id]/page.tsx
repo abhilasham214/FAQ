@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Cluster detail: representative tickets, FAQ review card, all tickets, silhouette per K.
+ * Data: GET /api/clusters/{id}; the full ticket list (GET /api/clusters/{id}/tickets) loads on demand.
+ */
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";

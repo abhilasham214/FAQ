@@ -1,3 +1,4 @@
+"""Offline LLM used when LLM_PROVIDER=mock, in tests, and as the optional Gemini fallback."""
 from __future__ import annotations
 
 import json

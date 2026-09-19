@@ -1,3 +1,15 @@
+"""Gemini provider: sends one prompt, returns JSON text, classifies and retries failures.
+
+Flow: generate_json -> _request (retry loop) -> _call (SDK); on exception -> _classify.
+Every failed attempt is logged as "Gemini request failed: model=... status=... error_type=...",
+so grep the server log for that line first. error_type tells you which branch ran:
+  QUOTA_EXHAUSTED      429 + quota/billing text -> not retried; wait for the reset or change key
+  RATE_LIMITED         429, short-term          -> retried with backoff
+  SERVICE_UNAVAILABLE  408 / 5xx                -> retried with backoff
+  NETWORK              timeout / connection     -> retried with backoff
+  CLIENT_ERROR         400/401/403/404          -> not retried: bad key, model name or request
+To test the key and model on their own: python backend/scripts/check_gemini.py
+"""
 from __future__ import annotations
 
 import logging

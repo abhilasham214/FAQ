@@ -1,3 +1,4 @@
+"""Interface every clustering algorithm implements (only K-Means today)."""
 from __future__ import annotations
 
 from typing import Protocol

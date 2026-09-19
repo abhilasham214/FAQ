@@ -1,3 +1,4 @@
+"""Pick the winning K from the silhouette scores."""
 from __future__ import annotations
 
 from typing import Sequence

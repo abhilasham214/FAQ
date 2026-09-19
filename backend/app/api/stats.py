@@ -1,3 +1,4 @@
+"""Dashboard numbers (GET /api/stats), computed by services/cluster_service.get_stats."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

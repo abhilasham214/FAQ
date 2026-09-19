@@ -1,3 +1,4 @@
+"""Pipeline step 1: parse and validate an uploaded CSV (no database access here)."""
 from __future__ import annotations
 
 import csv

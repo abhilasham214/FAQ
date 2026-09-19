@@ -1,3 +1,4 @@
+"""POST /api/clusters/generate: load all tickets, cluster them, and store the run."""
 from __future__ import annotations
 
 from typing import List, Tuple

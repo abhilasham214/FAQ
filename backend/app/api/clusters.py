@@ -1,3 +1,9 @@
+"""Clustering and FAQ-generation endpoints under /api/clusters.
+
+Route ORDER matters: fixed paths (/generate, /faqs/...) are declared before /{cluster_id};
+otherwise FastAPI tries to parse "generate" as an int and answers 422.
+Clustering (POST /generate) never calls the LLM; FAQ endpoints do, one cluster at a time.
+"""
 from __future__ import annotations
 
 from typing import List

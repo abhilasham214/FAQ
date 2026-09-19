@@ -1,3 +1,9 @@
+"""Dependency wiring: which embedder, clusterer and LLM provider a request gets.
+
+This is the only place that reads LLM_PROVIDER / LLM_FALLBACK_TO_MOCK. FAQs look like
+"Mock theme: ..."? LLM_PROVIDER is not `gemini` in the environment the server runs in.
+Tests swap these functions out with `app.dependency_overrides`.
+"""
 from __future__ import annotations
 
 from functools import lru_cache

@@ -1,3 +1,4 @@
+"""Store uploaded tickets, rejecting duplicate files and skipping ticket IDs already stored."""
 from __future__ import annotations
 
 import hashlib

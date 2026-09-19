@@ -1,3 +1,7 @@
+/**
+ * Small shared UI pieces: stat cards, status badges, page headers, loading / error / empty states.
+ */
+
 import type { FaqStatus } from "@/lib/types";
 
 export function StatCard({ label, value, hint }: { label: string; value: number | string; hint?: string }) {
