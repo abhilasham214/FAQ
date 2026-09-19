@@ -32,4 +32,5 @@ class ClusterFaqResult(BaseModel):
     cluster_id: int
     faq: Optional[FaqDraft] = None
     error: Optional[str] = None
+    error_type: Optional[str] = None  # QUOTA_EXHAUSTED | GENERATION_FAILED
     from_cache: bool = False

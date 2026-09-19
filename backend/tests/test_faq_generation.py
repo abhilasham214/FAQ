@@ -5,13 +5,23 @@ from pydantic import ValidationError
 
 from app.clustering.kmeans import KMeansClusterer
 from app.core.errors import InvalidLLMOutputError, LLMError
+from app.llm.fallback import FallbackLLMProvider
 from app.llm.gemini import GeminiProvider
 from app.llm.mock import MockLLMProvider
 from app.prompts.faq_prompt import build_faq_prompt
 from app.schemas.faq import FaqDraft
 from app.schemas.ticket import Ticket
 from app.services.clustering_service import cluster_tickets
-from app.services.faq_generation import FaqGenerator, cache_key, parse_faq_json
+from app.services.faq_generation import (
+    MAX_REQUESTS_PER_CLUSTER,
+    MSG_INVALID_OUTPUT,
+    MSG_QUOTA_EXHAUSTED,
+    MSG_REQUEST_FAILED,
+    MSG_TEMPORARILY_UNAVAILABLE,
+    FaqGenerator,
+    cache_key,
+    parse_faq_json,
+)
 
 
 def make_tickets(n=3, prefix="T"):
@@ -106,13 +116,21 @@ def test_retries_once_on_invalid_output(tmp_path):
 def test_gives_up_after_repeated_invalid_output(tmp_path):
     provider = ScriptedProvider("garbage", "still garbage")
     result = FaqGenerator(provider, str(tmp_path)).generate_for_cluster(0, make_tickets(), 3)
-    assert result.faq is None and "validation" in result.error and provider.calls == 2
+    assert result.faq is None and result.error == MSG_INVALID_OUTPUT and provider.calls == 2
 
 
 def test_llm_failure_is_captured_not_raised(tmp_path):
-    provider = ScriptedProvider(LLMError("quota exceeded"))
+    provider = ScriptedProvider(LLMError("503 quota exceeded", status=503, transient=True))
     result = FaqGenerator(provider, str(tmp_path)).generate_for_cluster(0, make_tickets(), 3)
-    assert result.faq is None and "quota" in result.error and provider.calls == 1
+    assert result.faq is None and provider.calls == 1
+    assert result.error == MSG_TEMPORARILY_UNAVAILABLE and "503" not in result.error  # raw error stays in the log
+    assert result.error_type == "GENERATION_FAILED"
+
+
+def test_non_transient_llm_failure_gets_a_setup_message(tmp_path):
+    provider = ScriptedProvider(LLMError("403 API key invalid", status=403))
+    result = FaqGenerator(provider, str(tmp_path)).generate_for_cluster(0, make_tickets(), 3)
+    assert result.error == MSG_REQUEST_FAILED and "403" not in result.error
 
 
 def test_cache_prevents_second_llm_call(tmp_path):
@@ -165,4 +183,86 @@ def test_mock_provider_output_is_valid_and_grounded(tmp_path):
 
 def test_gemini_requires_api_key():
     with pytest.raises(LLMError):
-        GeminiProvider("")
+        GeminiProvider("", "gemini-3.8-flash")
+
+
+# --- fallback to mock -----------------------------------------------------
+def test_fallback_used_when_primary_fails(tmp_path):
+    provider = FallbackLLMProvider(ScriptedProvider(LLMError("503 unavailable")), MockLLMProvider())
+    result = FaqGenerator(provider, str(tmp_path)).generate_for_cluster(0, make_tickets(), 3)
+    assert result.faq is not None and result.faq.theme.startswith("Mock theme:")
+    assert provider.used_fallback
+
+
+def test_fallback_not_used_when_primary_works(tmp_path):
+    provider = FallbackLLMProvider(ScriptedProvider(valid_json(["T1"])), MockLLMProvider())
+    result = FaqGenerator(provider, str(tmp_path)).generate_for_cluster(0, make_tickets(), 3)
+    assert result.faq.theme == "Payment pending" and not provider.used_fallback
+
+
+def test_fallback_output_is_not_cached_as_primary(tmp_path):
+    primary = ScriptedProvider(LLMError("503"), valid_json(["T1"]))
+    gen = FaqGenerator(FallbackLLMProvider(primary, MockLLMProvider()), str(tmp_path))
+    first = gen.generate_for_cluster(0, make_tickets(), 3)
+    second = gen.generate_for_cluster(0, make_tickets(), 3)  # primary recovered: must call it, not reuse mock
+    assert first.faq.theme.startswith("Mock theme:")
+    assert second.faq.theme == "Payment pending" and not second.from_cache
+
+
+# --- quota exhaustion -----------------------------------------------------
+class BurningProvider:
+    """Provider that reports how many API requests it spent, like GeminiProvider does."""
+
+    name = "burning"
+
+    def __init__(self, cost_per_call, *responses):
+        self.requests = 0
+        self.calls = 0
+        self._cost = cost_per_call
+        self._responses = list(responses)
+
+    def generate_json(self, prompt):
+        self.calls += 1
+        self.requests += self._cost
+        item = self._responses.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+def quota_error():
+    return LLMError("429 exceeded your current quota", status=429, transient=False, error_type="QUOTA_EXHAUSTED")
+
+
+def test_quota_exhaustion_is_reported_as_its_own_type(tmp_path):
+    provider = ScriptedProvider(quota_error())
+    result = FaqGenerator(provider, str(tmp_path)).generate_for_cluster(0, make_tickets(), 3)
+    assert result.error_type == "QUOTA_EXHAUSTED" and result.error == MSG_QUOTA_EXHAUSTED
+    assert provider.calls == 1 and "429" not in result.error
+
+
+def test_quota_exhaustion_skips_the_remaining_clusters(tmp_path, fake_embedder):
+    tickets = []
+    for phrase in ["payment pending gateway", "login password token", "refund bank amount"]:
+        for i in range(8):
+            tickets.append(
+                Ticket(ticket_id=f"T{len(tickets) + 1}", title=phrase, description=f"{phrase} {i}",
+                       resolution=phrase, status="resolved")
+            )
+    clustering = cluster_tickets(tickets, fake_embedder, KMeansClusterer())
+    provider = ScriptedProvider(quota_error())  # only one response queued: a second call would raise IndexError
+    results = FaqGenerator(provider, str(tmp_path)).generate_all(clustering, {t.ticket_id: t for t in tickets})
+    assert provider.calls == 1 and len(results) == len(clustering.clusters) > 1
+    assert all(r.error_type == "QUOTA_EXHAUSTED" and r.faq is None for r in results)
+
+
+def test_json_retry_stops_once_the_request_budget_is_spent(tmp_path):
+    provider = BurningProvider(MAX_REQUESTS_PER_CLUSTER, "garbage", "garbage")
+    result = FaqGenerator(provider, str(tmp_path)).generate_for_cluster(0, make_tickets(), 3)
+    assert provider.calls == 1 and result.error == MSG_INVALID_OUTPUT  # no second round of HTTP retries
+
+
+def test_json_retry_still_happens_within_budget(tmp_path):
+    provider = BurningProvider(1, "garbage", valid_json(["T1"]))
+    result = FaqGenerator(provider, str(tmp_path)).generate_for_cluster(0, make_tickets(), 3)
+    assert provider.calls == 2 and result.faq is not None and provider.requests <= MAX_REQUESTS_PER_CLUSTER

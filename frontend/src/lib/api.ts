@@ -1,8 +1,10 @@
 import type {
+  Cluster,
   ClusterDetail,
   ClusterList,
   Faq,
   FaqUpdate,
+  FaqBatchResult,
   GenerateResult,
   Stats,
   Ticket,
@@ -37,6 +39,10 @@ export const api = {
     return request<UploadResult>("/api/tickets/upload", { method: "POST", body: form });
   },
   generate: () => request<GenerateResult>("/api/clusters/generate", { method: "POST" }),
+  generateFaq: (clusterId: number) =>
+    request<Cluster>(`/api/clusters/${clusterId}/faq/generate`, { method: "POST" }),
+  generateFaqs: () => request<FaqBatchResult>("/api/clusters/faqs/generate", { method: "POST" }),
+  retryFailedFaqs: () => request<FaqBatchResult>("/api/clusters/faqs/retry-failed", { method: "POST" }),
   approve: (id: number) => request<Faq>(`/api/faqs/${id}/approve`, { method: "POST" }),
   reject: (id: number) => request<Faq>(`/api/faqs/${id}/reject`, { method: "POST" }),
   editFaq: (id: number, update: FaqUpdate) =>

@@ -12,7 +12,7 @@ SAMPLE = Path(__file__).resolve().parents[2] / "data" / "sample_tickets.csv"
 
 def test_sample_csv_parses_cleanly():
     result = parse_tickets_csv(SAMPLE.read_bytes())
-    assert 100 <= len(result.tickets) <= 200
+    assert len(result.tickets) == 20
     assert result.errors == []
 
 

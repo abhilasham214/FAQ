@@ -38,7 +38,7 @@ def test_embedding_failure_returns_502_and_keeps_existing_data(loaded):
     app.dependency_overrides[get_embedder] = lambda: Failing()
     resp = loaded.post("/api/clusters/generate")
     assert resp.status_code == 502 and "model unavailable" in resp.json()["detail"]
-    assert loaded.get("/api/stats").json()["total_tickets"] == 153  # uploaded tickets untouched
+    assert loaded.get("/api/stats").json()["total_tickets"] == 20  # uploaded tickets untouched
 
 
 def test_database_failure_returns_503(client):

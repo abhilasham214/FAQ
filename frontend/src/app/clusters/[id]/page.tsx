@@ -15,6 +15,21 @@ export default function ClusterDetailPage() {
   const { data: cluster, error, loading, setData } = useLoad(() => api.cluster(id));
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [ticketError, setTicketError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
+  async function generateFaq() {
+    if (!cluster) return;
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      setData({ ...(await api.generateFaq(cluster.id)), run: cluster.run });
+    } catch (e) {
+      setGenerateError(e instanceof Error ? e.message : "FAQ generation failed");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function showAllTickets() {
     try {
@@ -42,7 +57,21 @@ export default function ClusterDetailPage() {
           {cluster.faq ? (
             <FaqReviewCard faq={cluster.faq} onChange={(faq) => setData({ ...cluster, faq })} />
           ) : (
-            <ErrorBanner message={`No FAQ available: ${cluster.faq_error ?? "not generated"}`} />
+            <div className="space-y-3">
+              <ErrorBanner message={cluster.faq_error ?? "No FAQ has been generated for this cluster yet."} />
+              <button
+                onClick={generateFaq}
+                disabled={generating}
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {generating ? "Generating…" : cluster.faq_error ? "Retry FAQ generation" : "Generate FAQ"}
+              </button>
+              {generateError && (
+                <p role="alert" className="text-sm text-rose-700">
+                  {generateError}
+                </p>
+              )}
+            </div>
           )}
 
           <section className="rounded-xl border border-slate-200 bg-white p-5">

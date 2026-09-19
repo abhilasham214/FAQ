@@ -55,6 +55,17 @@ class ClusterOut(BaseModel):
     representative_tickets: List[Ticket]
     faq: Optional[FaqOut] = None
     faq_error: Optional[str] = None
+    faq_status: Optional[str] = None  # the FAQ's status, or GENERATION_FAILED when generation failed
+
+
+class FaqBatchOut(BaseModel):
+    """Result of generating / retrying FAQs for every cluster that has none."""
+
+    attempted: int
+    faqs_generated: int
+    faqs_failed: int
+    quota_exhausted: bool = False  # stopped early: the API reported project quota exhaustion
+    clusters: List[ClusterOut]
 
 
 class ClusterListOut(BaseModel):
@@ -79,10 +90,10 @@ class StepOut(BaseModel):
 
 
 class GenerateOut(BaseModel):
+    """Clustering only. FAQ generation is a separate, explicit step."""
+
     run: RunOut
     clusters: int
-    faqs_generated: int
-    faqs_failed: int
     steps: List[StepOut]
 
 

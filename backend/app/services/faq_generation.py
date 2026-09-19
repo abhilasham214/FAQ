@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import re
 from pathlib import Path
 from typing import Dict, List
@@ -15,7 +16,32 @@ from app.schemas.clustering import ClusteringResult
 from app.schemas.faq import ClusterFaqResult, FaqDraft
 from app.schemas.ticket import Ticket
 
+logger = logging.getLogger(__name__)
+
 MAX_ATTEMPTS = 2  # one retry when the model returns invalid / ungrounded JSON
+
+# What users see. Provider details stay in the backend log.
+MSG_TEMPORARILY_UNAVAILABLE = (
+    "FAQ generation is temporarily unavailable. The cluster was created successfully and can be retried."
+)
+MSG_REQUEST_FAILED = (
+    "FAQ generation failed because of a provider configuration or request problem. "
+    "The cluster was created successfully; check the server logs, then retry."
+)
+MSG_INVALID_OUTPUT = (
+    "The model did not return a usable FAQ. The cluster was created successfully and can be retried."
+)
+MSG_QUOTA_EXHAUSTED = (
+    "FAQ generation stopped: the AI provider's quota for this project is exhausted. "
+    "The cluster was created successfully; retry once the quota resets."
+)
+
+QUOTA_EXHAUSTED = "QUOTA_EXHAUSTED"
+GENERATION_FAILED = "GENERATION_FAILED"
+
+# Ceiling on API calls for one cluster, so the JSON retry and the provider's transient
+# retries cannot multiply into a burst. Counted via the provider's own request counter.
+MAX_REQUESTS_PER_CLUSTER = 3
 
 
 def cache_key(tickets: List[Ticket], model_name: str) -> str:
@@ -66,29 +92,64 @@ class FaqGenerator:
 
         prompt = build_faq_prompt(tickets, cluster_size)
         last_error = "unknown error"
+        spent_at_start = self._requests_made()
         for _ in range(MAX_ATTEMPTS):
             try:
                 faq = parse_faq_json(self._provider.generate_json(prompt), allowed_ids)
             except InvalidLLMOutputError as exc:
                 last_error = str(exc)  # retry: the model may produce valid output next time
+                if self._requests_made() - spent_at_start >= MAX_REQUESTS_PER_CLUSTER:
+                    break  # the provider's own retries already used this cluster's budget
                 continue
             except LLMError as exc:
-                return ClusterFaqResult(cluster_id=cluster_id, error=str(exc))  # provider down: don't retry
-            path.write_text(faq.model_dump_json(), encoding="utf-8")
+                logger.warning("FAQ generation failed for cluster %s: %s", cluster_id, exc)
+                if exc.error_type == QUOTA_EXHAUSTED:
+                    return ClusterFaqResult(
+                        cluster_id=cluster_id, error=MSG_QUOTA_EXHAUSTED, error_type=QUOTA_EXHAUSTED
+                    )
+                message = MSG_TEMPORARILY_UNAVAILABLE if exc.transient else MSG_REQUEST_FAILED
+                # the provider already exhausted its bounded retries; nothing more to try here
+                return ClusterFaqResult(cluster_id=cluster_id, error=message, error_type=GENERATION_FAILED)
+            if not getattr(self._provider, "used_fallback", False):  # never cache fallback output as the primary's
+                path.write_text(faq.model_dump_json(), encoding="utf-8")
             return ClusterFaqResult(cluster_id=cluster_id, faq=faq)
-        return ClusterFaqResult(cluster_id=cluster_id, error=last_error)
+        logger.warning("FAQ generation failed for cluster %s: %s", cluster_id, last_error)
+        return ClusterFaqResult(cluster_id=cluster_id, error=MSG_INVALID_OUTPUT, error_type=GENERATION_FAILED)
+
+    def _requests_made(self) -> int:
+        """API calls the provider has made so far (0 for providers that don't count)."""
+        return getattr(self._provider, "requests", 0)
 
     def generate_all(
         self, clustering: ClusteringResult, tickets_by_id: Dict[str, Ticket]
     ) -> List[ClusterFaqResult]:
-        """Run every cluster independently; a failed cluster yields an error result, not an exception."""
-        results = []
+        """Run every cluster in turn; a failed cluster yields an error result, not an exception.
+
+        Sequential by design (one in-flight request), and stops calling the API entirely once
+        it reports project quota exhaustion: the remaining clusters are marked, not retried.
+        """
+        results: List[ClusterFaqResult] = []
+        quota_exhausted = False
         for cluster in clustering.clusters:
+            if quota_exhausted:
+                results.append(
+                    ClusterFaqResult(
+                        cluster_id=cluster.cluster_id, error=MSG_QUOTA_EXHAUSTED, error_type=QUOTA_EXHAUSTED
+                    )
+                )
+                continue
             tickets = [tickets_by_id[tid] for tid in cluster.representative_ticket_ids]
             try:
-                results.append(self.generate_for_cluster(cluster.cluster_id, tickets, cluster.size))
-            except Exception as exc:  # last-resort guard so one cluster can't crash the run
-                results.append(ClusterFaqResult(cluster_id=cluster.cluster_id, error=f"Unexpected error: {exc}"))
+                result = self.generate_for_cluster(cluster.cluster_id, tickets, cluster.size)
+            except Exception:  # last-resort guard so one cluster can't crash the run
+                logger.exception("Unexpected error generating FAQ for cluster %s", cluster.cluster_id)
+                result = ClusterFaqResult(
+                    cluster_id=cluster.cluster_id, error=MSG_REQUEST_FAILED, error_type=GENERATION_FAILED
+                )
+            if result.error_type == QUOTA_EXHAUSTED:
+                quota_exhausted = True
+                logger.warning("Quota exhausted; skipping API calls for the remaining clusters")
+            results.append(result)
         return results
 
     @staticmethod

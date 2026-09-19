@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -12,6 +13,7 @@ from app.core.errors import (
     DuplicateUploadError,
     EmbeddingError,
     EmptyDatasetError,
+    FaqAlreadyExistsError,
     FaqBuilderError,
     InsufficientTicketsError,
     LLMError,
@@ -21,11 +23,14 @@ from app.core.errors import (
 from app.core.config import get_settings
 from app.database.session import init_db
 
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s: %(message)s")
+
 # Domain error -> HTTP status. Routes stay free of try/except.
 STATUS_BY_ERROR = {
     MalformedCsvError: 400,
     NotFoundError: 404,
     DuplicateUploadError: 409,
+    FaqAlreadyExistsError: 409,
     EmptyDatasetError: 422,
     InsufficientTicketsError: 422,
     EmbeddingError: 502,

@@ -150,6 +150,29 @@ Then open <http://localhost:3000>, go to **Upload**, and choose `data/sample_tic
 
 Set `GEMINI_API_KEY` and `LLM_PROVIDER=gemini` in `.env`. The default `mock` provider works offline and produces placeholder FAQs, useful for development. Responses are cached under `CACHE_DIR/llm`, so re-running on the same data makes no new API calls.
 
+### Resetting the database
+
+To start from a clean slate, stop the backend and empty every app table (the tables themselves are kept, and ID counters restart at 1). This cannot be undone: edited and approved FAQs are lost too.
+
+With `psql` (installed with PostgreSQL). Use `127.0.0.1` rather than `localhost`: over IPv6 (`::1`) the password check can fail even when the password is correct.
+
+```powershell
+$env:PGPASSWORD = "faq"
+& "C:\Program Files\PostgreSQL\16\bin\psql.exe" -h 127.0.0.1 -U faq -d faq -c "TRUNCATE faqs, cluster_tickets, clusters, cluster_runs, tickets, uploads RESTART IDENTITY CASCADE;"
+```
+
+Or without `psql`, from the project root using the project's Python:
+
+```powershell
+.venv\Scripts\python.exe -c "import psycopg2; c=psycopg2.connect('dbname=faq user=faq password=faq host=127.0.0.1'); c.cursor().execute('TRUNCATE faqs, cluster_tickets, clusters, cluster_runs, tickets, uploads RESTART IDENTITY CASCADE'); c.commit(); print('cleared')"
+```
+
+Gemini responses are cached separately under `CACHE_DIR/llm`, so after a reset a cluster with the same tickets reuses its old FAQ without a new API call. To force fresh FAQs, also delete that folder (`Remove-Item -Recurse -Force backend\.cache\llm`). Leave `.cache/embeddings` alone; it only speeds up clustering.
+
+When using the SQLite fallback instead of PostgreSQL, stop the backend and delete `backend/faq_dev.db`; it is recreated on the next start.
+
+Then restart the backend, upload `data/sample_tickets.csv` again and generate the clusters.
+
 ### Tests
 
 ```bash

@@ -15,6 +15,8 @@ const STATUS_STYLES: Record<FaqStatus, string> = {
   REVIEW: "bg-amber-100 text-amber-800",
   APPROVED: "bg-emerald-100 text-emerald-800",
   REJECTED: "bg-rose-100 text-rose-800",
+  GENERATION_FAILED: "bg-rose-100 text-rose-800",
+  QUOTA_EXHAUSTED: "bg-amber-100 text-amber-800",
 };
 
 export function StatusBadge({ status }: { status: FaqStatus }) {

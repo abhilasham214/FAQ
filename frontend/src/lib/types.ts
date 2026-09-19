@@ -1,4 +1,10 @@
-export type FaqStatus = "GENERATED" | "REVIEW" | "APPROVED" | "REJECTED";
+export type FaqStatus =
+  | "GENERATED"
+  | "REVIEW"
+  | "APPROVED"
+  | "REJECTED"
+  | "GENERATION_FAILED"
+  | "QUOTA_EXHAUSTED";
 
 export interface Ticket {
   ticket_id: string;
@@ -45,6 +51,15 @@ export interface Cluster {
   representative_tickets: Ticket[];
   faq: Faq | null;
   faq_error: string | null;
+  faq_status: FaqStatus | null;
+}
+
+export interface FaqBatchResult {
+  attempted: number;
+  faqs_generated: number;
+  faqs_failed: number;
+  quota_exhausted: boolean;
+  clusters: Cluster[];
 }
 
 export interface ClusterList {
@@ -77,11 +92,10 @@ export interface Step {
   detail: string | null;
 }
 
+/** Clustering only: FAQ generation is a separate, explicit step. */
 export interface GenerateResult {
   run: Run;
   clusters: number;
-  faqs_generated: number;
-  faqs_failed: number;
   steps: Step[];
 }
 

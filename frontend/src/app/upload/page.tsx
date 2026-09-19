@@ -8,7 +8,7 @@ import type { GenerateResult, UploadResult } from "@/lib/types";
 
 type Phase = "idle" | "uploading" | "generating" | "done";
 
-const PIPELINE = ["Loaded tickets", "Generated embeddings", "Identified clusters", "Generated themes", "Generated FAQs"];
+const PIPELINE = ["Loaded tickets", "Generated embeddings", "Identified clusters"];
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -34,7 +34,7 @@ export default function UploadPage() {
     }
   }
 
-  // Backend runs the pipeline in one request, so steps are shown as pending while it runs
+  // Backend runs clustering in one request, so steps are shown as pending while it runs
   // and resolved from the response's step list when it finishes.
   function stepState(name: string): "done" | "failed" | "pending" | "waiting" {
     const step = result?.steps.find((s) => s.name === name);
@@ -65,7 +65,7 @@ export default function UploadPage() {
           disabled={!file || busy}
           className="mt-4 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-          {phase === "uploading" ? "Uploading…" : phase === "generating" ? "Processing…" : "Upload & generate"}
+          {phase === "uploading" ? "Uploading…" : phase === "generating" ? "Clustering…" : "Upload & cluster"}
         </button>
       </div>
 
@@ -124,9 +124,10 @@ export default function UploadPage() {
           {result && (
             <div className="mt-4 border-t border-slate-100 pt-4 text-sm">
               <p>
-                {result.clusters} clusters (K={result.run.chosen_k}, silhouette {result.run.silhouette.toFixed(3)}),{" "}
-                {result.faqs_generated} FAQs generated
-                {result.faqs_failed > 0 && `, ${result.faqs_failed} failed`}.
+                {result.clusters} clusters (K={result.run.chosen_k}, silhouette {result.run.silhouette.toFixed(3)}).
+              </p>
+              <p className="mt-1 text-slate-500">
+                Clustering is complete and uses no AI quota. Generate each cluster's FAQ from the clusters page.
               </p>
               <Link href="/clusters" className="mt-2 inline-block text-indigo-600 hover:underline">
                 View clusters →

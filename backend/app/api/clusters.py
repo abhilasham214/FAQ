@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_cache_dir, get_clusterer, get_embedder, get_llm
 from app.database.session import get_db
-from app.schemas.api import ClusterDetailOut, ClusterListOut, FaqOut, GenerateOut, RunOut
+from app.schemas.api import ClusterDetailOut, ClusterListOut, ClusterOut, FaqBatchOut, FaqOut, GenerateOut, RunOut
 from app.schemas.ticket import Ticket
 from app.services import cluster_service
-from app.services.pipeline_service import generate_knowledge_base
+from app.services.pipeline_service import build_clusters
 
 router = APIRouter(prefix="/api/clusters", tags=["clusters"])
 
@@ -21,18 +21,26 @@ def generate_clusters(
     db: Session = Depends(get_db),
     embedder=Depends(get_embedder),
     clusterer=Depends(get_clusterer),
-    llm=Depends(get_llm),
-    cache_dir: str = Depends(get_cache_dir),
 ) -> GenerateOut:
-    run, faq_results, steps = generate_knowledge_base(db, embedder, clusterer, llm, cache_dir)
-    failed = sum(1 for r in faq_results if r.faq is None)
-    return GenerateOut(
-        run=RunOut.model_validate(run),
-        clusters=len(faq_results),
-        faqs_generated=len(faq_results) - failed,
-        faqs_failed=failed,
-        steps=steps,
-    )
+    """Cluster the uploaded tickets. Spends no LLM quota: FAQs are generated separately."""
+    run, steps = build_clusters(db, embedder, clusterer)
+    return GenerateOut(run=RunOut.model_validate(run), clusters=len(run.clusters), steps=steps)
+
+
+# Also before "/{cluster_id}". FAQ-only: clusters and embeddings are never recomputed.
+@router.post("/faqs/generate", response_model=FaqBatchOut)
+def generate_faqs(
+    db: Session = Depends(get_db), llm=Depends(get_llm), cache_dir: str = Depends(get_cache_dir)
+) -> FaqBatchOut:
+    return cluster_service.generate_missing_faqs(db, llm, cache_dir)
+
+
+@router.post("/faqs/retry-failed", response_model=FaqBatchOut)
+def retry_failed_faqs(
+    db: Session = Depends(get_db), llm=Depends(get_llm), cache_dir: str = Depends(get_cache_dir)
+) -> FaqBatchOut:
+    """Same work as /faqs/generate, kept as the explicit name for retrying failures."""
+    return cluster_service.generate_missing_faqs(db, llm, cache_dir)
 
 
 @router.get("", response_model=ClusterListOut)
@@ -53,3 +61,10 @@ def get_cluster_tickets(cluster_id: int, db: Session = Depends(get_db)) -> List[
 @router.get("/{cluster_id}/faq", response_model=FaqOut)
 def get_cluster_faq(cluster_id: int, db: Session = Depends(get_db)) -> FaqOut:
     return cluster_service.get_cluster_faq(db, cluster_id)
+
+
+@router.post("/{cluster_id}/faq/generate", response_model=ClusterOut)
+def generate_cluster_faq(
+    cluster_id: int, db: Session = Depends(get_db), llm=Depends(get_llm), cache_dir: str = Depends(get_cache_dir)
+) -> ClusterOut:
+    return cluster_service.generate_cluster_faq(db, cluster_id, llm, cache_dir)
