@@ -59,6 +59,10 @@ export default function FaqReviewPage() {
                     clusters: data.clusters.map((c) => (c.faq?.id === updated.id ? { ...c, faq: updated } : c)),
                   })
                 }
+                onRegenerated={(cluster) =>
+                  data &&
+                  setData({ ...data, clusters: data.clusters.map((c) => (c.id === cluster.id ? cluster : c)) })
+                }
               />
             ))}
             {visible.length === 0 && <p className="text-sm text-slate-500">No FAQs with this status.</p>}

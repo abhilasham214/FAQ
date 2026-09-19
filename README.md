@@ -86,7 +86,7 @@ frontend/src/   app/ (pages)  components/  lib/ (typed API client)
 2. **Schema validation:** output must match the `FaqDraft` model, or it is rejected.
 3. **Source check in code:** every cited `source_ticket_id` must be one that was actually sent. A citation of an unknown ticket invalidates the output.
 4. **Retry once** on invalid output; a provider failure (quota, network) is not retried and is recorded on the cluster instead.
-5. **Human approval:** nothing is final until a reviewer approves it. Editing an approved FAQ returns it to `REVIEW`.
+5. **Human approval:** nothing is final until a reviewer approves it. Editing an approved FAQ returns it to `REVIEW`. Regenerating one (**Regenerate** button, with a confirmation if it was approved, edited or rejected) returns it to `GENERATED`.
 
 Limits: steps 2–3 check structure and citations, not the *meaning* of the answer. The prompt rules and the reviewer cover that.
 
@@ -102,6 +102,7 @@ Interactive docs at `/docs` when the backend is running.
 | GET | `/api/clusters/{id}` | One cluster plus clustering info (chosen K, silhouette per K) |
 | GET | `/api/clusters/{id}/tickets` | All source tickets in the cluster |
 | GET | `/api/clusters/{id}/faq` | The cluster's FAQ (404 with reason if generation failed) |
+| POST | `/api/clusters/{id}/faq/regenerate` | Replace the cluster's FAQ with a new one (skips the cache; the model sees the previous version). The FAQ keeps its id and returns to `GENERATED`. 502 with the reason if generation fails, in which case the existing FAQ is kept |
 | PATCH | `/api/faqs/{id}` | Edit theme / description / question / answer / steps; status becomes `REVIEW` |
 | POST | `/api/faqs/{id}/approve` | Status `APPROVED` |
 | POST | `/api/faqs/{id}/reject` | Status `REJECTED` |

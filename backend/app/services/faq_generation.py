@@ -5,7 +5,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic import ValidationError
 
@@ -82,15 +82,28 @@ class FaqGenerator:
         self._dir = Path(cache_dir) / "llm"
         self._dir.mkdir(parents=True, exist_ok=True)
 
-    def generate_for_cluster(self, cluster_id: int, tickets: List[Ticket], cluster_size: int) -> ClusterFaqResult:
+    def generate_for_cluster(
+        self,
+        cluster_id: int,
+        tickets: List[Ticket],
+        cluster_size: int,
+        previous: Optional[FaqDraft] = None,
+    ) -> ClusterFaqResult:
+        """Generate one cluster's FAQ.
+
+        Passing `previous` means "regenerate": the cache is skipped (it would hand back the
+        same FAQ) and the model is shown the old version so it writes a fresh one. The new
+        result then replaces the cache entry.
+        """
         allowed_ids = [t.ticket_id for t in tickets]
         path = self._dir / f"{cache_key(tickets, self._provider.name)}.json"
 
-        cached = self._read_cache(path, allowed_ids)
-        if cached is not None:
-            return ClusterFaqResult(cluster_id=cluster_id, faq=cached, from_cache=True)
+        if previous is None:
+            cached = self._read_cache(path, allowed_ids)
+            if cached is not None:
+                return ClusterFaqResult(cluster_id=cluster_id, faq=cached, from_cache=True)
 
-        prompt = build_faq_prompt(tickets, cluster_size)
+        prompt = build_faq_prompt(tickets, cluster_size, previous)
         last_error = "unknown error"
         spent_at_start = self._requests_made()
         for _ in range(MAX_ATTEMPTS):

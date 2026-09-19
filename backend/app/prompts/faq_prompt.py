@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
+from app.schemas.faq import FaqDraft
 from app.schemas.ticket import Ticket
 
 # Bump when the prompt changes so cached responses are not reused across versions.
@@ -27,14 +28,23 @@ Respond with a single JSON object with exactly these keys:
   "insufficient_information": false
 }}
 
-TICKETS
+"""
+
+# Added only when regenerating, so the model does not simply return the same FAQ again.
+_PREVIOUS = """PREVIOUS VERSION (a reviewer asked for a new one)
+{previous}
+Write a fresh version of this FAQ: improve clarity, completeness and wording rather than copying it.
+The grounding rules above still apply; do not keep anything from the previous version that the tickets do not support.
+
 """
 
 
-def build_faq_prompt(tickets: List[Ticket], cluster_size: int) -> str:
+def build_faq_prompt(tickets: List[Ticket], cluster_size: int, previous: Optional[FaqDraft] = None) -> str:
     blocks = [
         f"[{t.ticket_id}] Title: {t.title}\nDescription: {t.description}\nResolution: {t.resolution}"
         for t in tickets
     ]
     header = _INSTRUCTIONS.format(cluster_size=cluster_size, shown=len(tickets))
-    return header + "\n\n".join(blocks) + "\n"
+    if previous is not None:
+        header += _PREVIOUS.format(previous=previous.model_dump_json(indent=2))
+    return header + "TICKETS\n" + "\n\n".join(blocks) + "\n"

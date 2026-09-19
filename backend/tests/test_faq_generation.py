@@ -266,3 +266,26 @@ def test_json_retry_still_happens_within_budget(tmp_path):
     provider = BurningProvider(1, "garbage", valid_json(["T1"]))
     result = FaqGenerator(provider, str(tmp_path)).generate_for_cluster(0, make_tickets(), 3)
     assert provider.calls == 2 and result.faq is not None and provider.requests <= MAX_REQUESTS_PER_CLUSTER
+
+
+# --- regeneration ---------------------------------------------------------
+
+def test_prompt_includes_previous_version_only_when_regenerating():
+    previous = FaqDraft.model_validate_json(valid_json(["T1"]))
+    normal = build_faq_prompt(make_tickets(2), cluster_size=2)
+    regen = build_faq_prompt(make_tickets(2), cluster_size=2, previous=previous)
+    assert "PREVIOUS VERSION" not in normal
+    assert "PREVIOUS VERSION" in regen and "Why is my payment pending?" in regen
+    assert regen.index("PREVIOUS VERSION") < regen.index("[T1] Title:")  # tickets stay last
+
+
+def test_regenerate_skips_cache_and_replaces_it(tmp_path):
+    first, second = valid_json(["T1"]), valid_json(["T1", "T2"])
+    provider = ScriptedProvider(first, second)
+    gen = FaqGenerator(provider, str(tmp_path))
+    original = gen.generate_for_cluster(0, make_tickets(), 3).faq
+    regenerated = gen.generate_for_cluster(0, make_tickets(), 3, previous=original)
+    assert provider.calls == 2 and not regenerated.from_cache  # a cached FAQ would have been returned otherwise
+    assert regenerated.faq.source_ticket_ids == ["T1", "T2"]
+    cached = gen.generate_for_cluster(0, make_tickets(), 3)
+    assert cached.from_cache and cached.faq == regenerated.faq and provider.calls == 2

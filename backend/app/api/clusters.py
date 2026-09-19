@@ -68,3 +68,11 @@ def generate_cluster_faq(
     cluster_id: int, db: Session = Depends(get_db), llm=Depends(get_llm), cache_dir: str = Depends(get_cache_dir)
 ) -> ClusterOut:
     return cluster_service.generate_cluster_faq(db, cluster_id, llm, cache_dir)
+
+
+@router.post("/{cluster_id}/faq/regenerate", response_model=ClusterOut)
+def regenerate_cluster_faq(
+    cluster_id: int, db: Session = Depends(get_db), llm=Depends(get_llm), cache_dir: str = Depends(get_cache_dir)
+) -> ClusterOut:
+    """Replace the cluster's FAQ with a new one. On failure (502) the existing FAQ is kept."""
+    return cluster_service.regenerate_cluster_faq(db, cluster_id, llm, cache_dir)

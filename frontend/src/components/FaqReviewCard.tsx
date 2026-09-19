@@ -3,18 +3,29 @@
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Faq } from "@/lib/types";
+import type { Cluster, Faq } from "@/lib/types";
 import { StatusBadge } from "./ui";
 
 interface Props {
   faq: Faq;
   onChange: (faq: Faq) => void;
   linkToCluster?: boolean;
+  /** Shows a Regenerate button; receives the cluster with its new FAQ. */
+  onRegenerated?: (cluster: Cluster) => void;
 }
 
-export function FaqReviewCard({ faq, onChange, linkToCluster }: Props) {
+// Replacing one of these loses a reviewer's decision or edits, so ask first.
+const CONFIRM_REGENERATE: Partial<Record<Faq["status"], string>> = {
+  APPROVED: "This FAQ is approved.",
+  REVIEW: "This FAQ has been edited.",
+  REJECTED: "This FAQ was rejected.",
+};
+
+export function FaqReviewCard({ faq, onChange, linkToCluster, onRegenerated }: Props) {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [confirmingRegenerate, setConfirmingRegenerate] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState({ question: "", answer: "", steps: "" });
 
@@ -28,6 +39,23 @@ export function FaqReviewCard({ faq, onChange, linkToCluster }: Props) {
       setError(e instanceof Error ? e.message : "Action failed");
     } finally {
       setBusy(false);
+    }
+  }
+
+  // One Gemini call. On failure the backend keeps the current FAQ, so only the error is shown.
+  async function regenerate() {
+    if (!onRegenerated) return;
+    setConfirmingRegenerate(false);
+    setBusy(true);
+    setRegenerating(true);
+    setError(null);
+    try {
+      onRegenerated(await api.regenerateFaq(faq.cluster_id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Regeneration failed");
+    } finally {
+      setBusy(false);
+      setRegenerating(false);
     }
   }
 
@@ -117,6 +145,27 @@ export function FaqReviewCard({ faq, onChange, linkToCluster }: Props) {
 
       {error && <p className="mt-3 text-sm text-rose-700">{error}</p>}
 
+      {confirmingRegenerate && (
+        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p>
+            {CONFIRM_REGENERATE[faq.status]} Regenerating replaces it with a new version from Gemini, which will need
+            to be reviewed again.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button className={`${btn} bg-indigo-600 text-white`} disabled={busy} onClick={regenerate}>
+              Yes, regenerate
+            </button>
+            <button
+              className={`${btn} border border-amber-300 bg-white`}
+              disabled={busy}
+              onClick={() => setConfirmingRegenerate(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
         {editing ? (
           <>
@@ -146,6 +195,15 @@ export function FaqReviewCard({ faq, onChange, linkToCluster }: Props) {
             <button className={`${btn} border border-slate-300`} disabled={busy} onClick={startEdit}>
               Edit
             </button>
+            {onRegenerated && (
+              <button
+                className={`${btn} border border-indigo-300 text-indigo-700`}
+                disabled={busy || confirmingRegenerate}
+                onClick={() => (CONFIRM_REGENERATE[faq.status] ? setConfirmingRegenerate(true) : regenerate())}
+              >
+                {regenerating ? "Regenerating…" : "Regenerate"}
+              </button>
+            )}
           </>
         )}
         {linkToCluster && (

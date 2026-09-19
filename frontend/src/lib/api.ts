@@ -41,6 +41,8 @@ export const api = {
   generate: () => request<GenerateResult>("/api/clusters/generate", { method: "POST" }),
   generateFaq: (clusterId: number) =>
     request<Cluster>(`/api/clusters/${clusterId}/faq/generate`, { method: "POST" }),
+  regenerateFaq: (clusterId: number) =>
+    request<Cluster>(`/api/clusters/${clusterId}/faq/regenerate`, { method: "POST" }),
   generateFaqs: () => request<FaqBatchResult>("/api/clusters/faqs/generate", { method: "POST" }),
   retryFailedFaqs: () => request<FaqBatchResult>("/api/clusters/faqs/retry-failed", { method: "POST" }),
   approve: (id: number) => request<Faq>(`/api/faqs/${id}/approve`, { method: "POST" }),

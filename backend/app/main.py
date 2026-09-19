@@ -15,6 +15,7 @@ from app.core.errors import (
     EmptyDatasetError,
     FaqAlreadyExistsError,
     FaqBuilderError,
+    FaqRegenerationError,
     InsufficientTicketsError,
     LLMError,
     MalformedCsvError,
@@ -35,6 +36,7 @@ STATUS_BY_ERROR = {
     InsufficientTicketsError: 422,
     EmbeddingError: 502,
     LLMError: 502,
+    FaqRegenerationError: 502,
 }
 
 

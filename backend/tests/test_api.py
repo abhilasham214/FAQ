@@ -307,3 +307,36 @@ def test_regenerate_replaces_previous_run(with_faqs):
     assert all(c["faq"] is None for c in clusters)  # a fresh clustering run starts without FAQs
     with_faqs.post("/api/clusters/faqs/generate")
     assert with_faqs.get("/api/stats").json()["faqs"] == len(clusters)
+
+
+# --- regeneration -------------------------------------------------------
+
+def test_regenerate_replaces_faq_in_place_and_resets_status(with_faqs):
+    cluster = with_faqs.get("/api/clusters").json()["clusters"][0]
+    old = cluster["faq"]
+    with_faqs.post(f"/api/faqs/{old['id']}/approve")
+    spy = MockLLMProvider()
+    app.dependency_overrides[get_llm] = lambda: spy
+    out = with_faqs.post(f"/api/clusters/{cluster['id']}/faq/regenerate")
+    assert out.status_code == 200
+    faq = out.json()["faq"]
+    assert spy.calls == 1  # always a new call, even though this cluster's FAQ is cached
+    assert faq["id"] == old["id"] and faq["status"] == "GENERATED"  # same FAQ, back to review
+
+
+def test_failed_regeneration_keeps_the_existing_faq(with_faqs):
+    cluster = with_faqs.get("/api/clusters").json()["clusters"][0]
+    faq_id = cluster["faq"]["id"]
+    with_faqs.post(f"/api/faqs/{faq_id}/approve")
+    app.dependency_overrides[get_llm] = lambda: CountingProvider(transient_error())
+    resp = with_faqs.post(f"/api/clusters/{cluster['id']}/faq/regenerate")
+    assert resp.status_code == 502
+    assert "temporarily unavailable" in resp.json()["detail"] and "existing FAQ was kept" in resp.json()["detail"]
+    after = with_faqs.get(f"/api/clusters/{cluster['id']}").json()
+    assert after["faq"]["id"] == faq_id and after["faq"]["status"] == "APPROVED" and after["faq_error"] is None
+
+
+def test_regenerate_needs_an_existing_faq(generated):
+    cluster = generated.get("/api/clusters").json()["clusters"][0]
+    assert generated.post(f"/api/clusters/{cluster['id']}/faq/regenerate").status_code == 404
+    assert generated.post("/api/clusters/9999/faq/regenerate").status_code == 404

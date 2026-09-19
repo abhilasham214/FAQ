@@ -5,10 +5,11 @@ from typing import List, Optional
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.errors import FaqAlreadyExistsError, NotFoundError
+from app.core.errors import FaqAlreadyExistsError, FaqRegenerationError, NotFoundError
 from app.llm.base import LLMProvider
-from app.models import Cluster, ClusterRun, ClusterTicket, Faq, TicketRow
+from app.models import Cluster, ClusterRun, ClusterTicket, Faq, FaqStatus, TicketRow
 from app.schemas.api import ClusterDetailOut, ClusterListOut, ClusterOut, FaqBatchOut, FaqOut, RunOut, StatsOut
+from app.schemas.faq import FaqDraft
 from app.schemas.ticket import Ticket
 from app.services.faq_generation import (
     GENERATION_FAILED,
@@ -145,6 +146,47 @@ def generate_cluster_faq(db: Session, cluster_id: int, llm: LLMProvider, cache_d
                 insufficient_information=draft.insufficient_information,
             )
         )
+    db.commit()
+    db.refresh(cluster)
+    return _cluster_out(db, cluster)
+
+
+def regenerate_cluster_faq(db: Session, cluster_id: int, llm: LLMProvider, cache_dir: str) -> ClusterOut:
+    """Replace a cluster's FAQ with a freshly generated one (always a new LLM call).
+
+    The old FAQ is only overwritten once the new one is valid: if generation fails, nothing
+    changes and FaqRegenerationError carries the user-facing reason. The row is updated in
+    place, so the FAQ keeps its id; its status goes back to GENERATED for a new review.
+    """
+    cluster = _get_cluster(db, cluster_id)
+    faq = cluster.faq
+    if faq is None:
+        raise NotFoundError(f"Cluster {cluster_id} has no FAQ to regenerate; generate one first")
+    previous = FaqDraft(
+        theme=faq.theme,
+        description=faq.description,
+        question=faq.question,
+        answer=faq.answer,
+        resolution_steps=faq.resolution_steps,
+        source_ticket_ids=faq.source_ticket_ids,
+        insufficient_information=faq.insufficient_information,
+    )
+    tickets = _representatives(db, cluster.id)
+    result = FaqGenerator(llm, cache_dir).generate_for_cluster(
+        cluster.cluster_index, tickets, cluster.ticket_count, previous=previous
+    )
+    draft = result.faq
+    if draft is None:
+        # keep the reason (first sentence); the "cluster was created" follow-up does not apply here
+        reason = (result.error or "FAQ regeneration failed.").split(". ")[0].rstrip(".")
+        raise FaqRegenerationError(f"{reason}. The existing FAQ was kept; try again later.")
+
+    cluster.name, cluster.description, cluster.faq_error = draft.theme, draft.description, None
+    faq.theme, faq.description = draft.theme, draft.description
+    faq.question, faq.answer = draft.question, draft.answer
+    faq.resolution_steps, faq.source_ticket_ids = draft.resolution_steps, draft.source_ticket_ids
+    faq.insufficient_information = draft.insufficient_information
+    faq.status = FaqStatus.GENERATED.value
     db.commit()
     db.refresh(cluster)
     return _cluster_out(db, cluster)

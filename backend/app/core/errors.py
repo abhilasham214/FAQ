@@ -31,6 +31,10 @@ class FaqAlreadyExistsError(FaqBuilderError):
     """FAQ generation was requested for a cluster that already has an FAQ."""
 
 
+class FaqRegenerationError(FaqBuilderError):
+    """Regenerating an FAQ failed; the existing FAQ was kept. The message is user-facing."""
+
+
 class NotFoundError(FaqBuilderError):
     """A requested cluster / FAQ does not exist."""
 

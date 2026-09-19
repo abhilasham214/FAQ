@@ -55,7 +55,11 @@ export default function ClusterDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           {cluster.faq ? (
-            <FaqReviewCard faq={cluster.faq} onChange={(faq) => setData({ ...cluster, faq })} />
+            <FaqReviewCard
+              faq={cluster.faq}
+              onChange={(faq) => setData({ ...cluster, faq })}
+              onRegenerated={(updated) => setData({ ...updated, run: cluster.run })}
+            />
           ) : (
             <div className="space-y-3">
               <ErrorBanner message={cluster.faq_error ?? "No FAQ has been generated for this cluster yet."} />
