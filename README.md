@@ -510,7 +510,7 @@ Vercel can't host the backend itself: PyTorch and sentence-transformers exceed V
 This permanently deletes all tickets, clusters and FAQs, including approved ones. Stop the backend first, then either:
 
 ```powershell
-$env:PGPASSWORD = "faq"
+$env:PGPASSWORD = ""
 & "C:\Program Files\PostgreSQL\16\bin\psql.exe" -h 127.0.0.1 -U faq -d faq -c "TRUNCATE faqs, cluster_tickets, clusters, cluster_runs, tickets, uploads RESTART IDENTITY CASCADE;"
 ```
 
